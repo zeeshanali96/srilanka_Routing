@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import StatusAppBar from '../components/StatusBar/Appbar';
 import {useTranslation} from 'react-i18next';
@@ -13,6 +13,8 @@ import {
 
 import {Provider as PaperProvider} from 'react-native-paper';
 
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 import constants from '../src/constants';
 
 import {Formik} from 'formik';
@@ -20,16 +22,20 @@ import * as Yup from 'yup';
 
 // Validation Schema
 const validationSchema = Yup.object().shape({
-  name: Yup.string().required('Name is required'),
-  email: Yup.string().email('Invalid email').required('Email is required'),
-  password: Yup.string()
-    .min(6, 'Password must be at least 6 characters')
-    .required('Password is required'),
+  start_form: Yup.string().required('Start Form is required'),
+  end_to: Yup.string().required('End To is required'),
+  date: Yup.date().required('Date is required'),
+  time: Yup.string().required('Time is required'),
 });
 
 const TrainSchedule = () => {
   const [visible, setVisible] = React.useState(false);
   const [message, setMessage] = React.useState('');
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
 
   const theme = {
     ...DefaultTheme,
@@ -64,10 +70,32 @@ const TrainSchedule = () => {
   const onSubmit = (values, {resetForm}) => {
     setMessage('Form submitted successfully!');
     setVisible(true);
-    resetForm(); // Reset the form fields after submission
+    resetForm();
+    console.log(values);
   };
 
   const hideSnackbar = () => setVisible(false);
+
+  const onDateChange = (event, selectedDate, setFieldValue) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setDate(selectedDate);
+      // Format the date for the form
+
+      setFieldValue('date', selectedDate);
+    }
+  };
+
+  const onTimeChange = (event, selectedTime, setFieldValue) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setTime(selectedTime);
+      // Format the time for the form
+      setFieldValue('time', selectedTime.toLocaleTimeString());
+    }
+  };
+
+  const timeOptions = {hour: '2-digit', minute: '2-digit'};
 
   return (
     <PaperProvider theme={theme}>
@@ -75,7 +103,7 @@ const TrainSchedule = () => {
         <StatusAppBar title={t('Train Schedule')} />
         <View style={styles.content}>
           <Formik
-            initialValues={{name: '', email: '', password: ''}}
+            initialValues={{start_form: '', end_to: '', date: '', time: ''}}
             validationSchema={validationSchema}
             onSubmit={onSubmit}>
             {({
@@ -85,51 +113,92 @@ const TrainSchedule = () => {
               values,
               errors,
               touched,
+              setFieldValue,
+              formik,
             }) => (
               <>
                 <TextInput
-                  label="Name"
-                  value={values.name}
-                  onChangeText={handleChange('name')}
-                  onBlur={handleBlur('name')}
+                  label="Start From"
+                  value={values.start_form}
+                  onChangeText={handleChange('start_form')}
+                  onBlur={handleBlur('start_form')}
                   style={styles.input}
-                  error={touched.name && !!errors.name}
+                  error={touched.start_form && !!errors.start_form}
                 />
-                {touched.name && errors.name && (
-                  <Text style={styles.errorText}>{errors.name}</Text>
+                {touched.start_form && errors.start_form && (
+                  <Text style={styles.errorText}>{errors.start_form}</Text>
                 )}
 
                 <TextInput
-                  label="Email"
-                  value={values.email}
-                  onChangeText={handleChange('email')}
-                  onBlur={handleBlur('email')}
-                  keyboardType="email-address"
+                  label="End To"
+                  value={values.end_to}
+                  onChangeText={handleChange('end_to')}
+                  onBlur={handleBlur('end_to')}
+                  keyboardType="end_to-address"
                   style={styles.input}
-                  error={touched.email && !!errors.email}
+                  error={touched.end_to && !!errors.end_to}
                 />
-                {touched.email && errors.email && (
-                  <Text style={styles.errorText}>{errors.email}</Text>
+                {touched.end_to && errors.end_to && (
+                  <Text style={styles.errorText}>{errors.end_to}</Text>
                 )}
 
-                <TextInput
-                  label="Password"
-                  value={values.password}
-                  onChangeText={handleChange('password')}
-                  onBlur={handleBlur('password')}
-                  secureTextEntry
-                  style={styles.input}
-                  error={touched.password && !!errors.password}
-                />
-                {touched.password && errors.password && (
-                  <Text style={styles.errorText}>{errors.password}</Text>
-                )}
+                <View style={styles.pickerContainer}>
+                  <Button
+                    mode="elevated"
+                    onPress={() => setShowDatePicker(true)}
+                    style={styles.button}>
+                    Select Date
+                  </Button>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      mode="date"
+                      value={date}
+                      onChange={(event, selectedDate) => {
+                        onDateChange(event, selectedDate, setFieldValue);
+                      }}
+                    />
+                  )}
+
+                  <Button
+                    mode="elevated"
+                    onPress={() => setShowTimePicker(true)}
+                    style={styles.button}>
+                    Select Time
+                  </Button>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      mode="time"
+                      value={time}
+                      onChange={(event, selectedDate) => {
+                        onTimeChange(event, selectedDate, setFieldValue);
+                      }}
+                    />
+                  )}
+                </View>
+
+                <View className="mt-2" style={styles.pickerContainer}>
+                  {touched.end_to && errors.date && (
+                    <Text style={styles.errorText}>{errors.date}</Text>
+                  )}
+                  {touched.end_to && errors.time && (
+                    <Text style={styles.errorText}>{errors.time}</Text>
+                  )}
+                </View>
+
+                <View style={styles.infoContainer}>
+                  <Text style={styles.infoText}>
+                    {date.toLocaleDateString()}
+                  </Text>
+                  <Text style={styles.infoText}>
+                    {time.toLocaleTimeString([], timeOptions)}
+                  </Text>
+                </View>
 
                 <Button
                   mode="contained"
                   onPress={handleSubmit}
                   style={styles.button}>
-                  Submit
+                  Find
                 </Button>
               </>
             )}
@@ -159,6 +228,7 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 16,
+    backgroundColor: 'none',
   },
   button: {
     marginTop: 16,
@@ -166,6 +236,21 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     marginBottom: 8,
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  infoContainer: {
+    marginVertical: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  infoText: {
+    fontSize: 16,
+    margin: 5,
+    fontWeight: 'bold',
   },
 });
 
