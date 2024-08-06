@@ -13,6 +13,8 @@ import {
 
 import {Provider as PaperProvider} from 'react-native-paper';
 
+import constants from '../src/constants';
+
 import {Formik} from 'formik';
 import * as Yup from 'yup';
 
@@ -33,7 +35,7 @@ const TrainSchedule = () => {
     ...DefaultTheme,
     colors: {
       ...DefaultTheme.colors,
-      primary: 'blue', // Customize primary color
+      primary: constants.colors.blue, // Customize primary color
     },
   };
 
