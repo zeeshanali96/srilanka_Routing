@@ -3,7 +3,15 @@ import {StyleSheet, Text, View} from 'react-native';
 import StatusAppBar from '../components/StatusBar/Appbar';
 import {useTranslation} from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {TextInput, Button, Snackbar, Portal} from 'react-native-paper';
+import {
+  TextInput,
+  Button,
+  Snackbar,
+  Portal,
+  DefaultTheme,
+} from 'react-native-paper';
+
+import {Provider as PaperProvider} from 'react-native-paper';
 
 import {Formik} from 'formik';
 import * as Yup from 'yup';
@@ -20,6 +28,14 @@ const validationSchema = Yup.object().shape({
 const TrainSchedule = () => {
   const [visible, setVisible] = React.useState(false);
   const [message, setMessage] = React.useState('');
+
+  const theme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: 'blue', // Customize primary color
+    },
+  };
 
   const {t} = useTranslation();
 
@@ -52,80 +68,82 @@ const TrainSchedule = () => {
   const hideSnackbar = () => setVisible(false);
 
   return (
-    <View style={styles.container}>
-      <StatusAppBar title={t('Train Schedule')} />
-      <View style={styles.content}>
-        <Formik
-          initialValues={{name: '', email: '', password: ''}}
-          validationSchema={validationSchema}
-          onSubmit={onSubmit}>
-          {({
-            handleChange,
-            handleBlur,
-            handleSubmit,
-            values,
-            errors,
-            touched,
-          }) => (
-            <>
-              <TextInput
-                label="Name"
-                value={values.name}
-                onChangeText={handleChange('name')}
-                onBlur={handleBlur('name')}
-                style={styles.input}
-                error={touched.name && !!errors.name}
-              />
-              {touched.name && errors.name && (
-                <Text style={styles.errorText}>{errors.name}</Text>
-              )}
+    <PaperProvider theme={theme}>
+      <View style={styles.container}>
+        <StatusAppBar title={t('Train Schedule')} />
+        <View style={styles.content}>
+          <Formik
+            initialValues={{name: '', email: '', password: ''}}
+            validationSchema={validationSchema}
+            onSubmit={onSubmit}>
+            {({
+              handleChange,
+              handleBlur,
+              handleSubmit,
+              values,
+              errors,
+              touched,
+            }) => (
+              <>
+                <TextInput
+                  label="Name"
+                  value={values.name}
+                  onChangeText={handleChange('name')}
+                  onBlur={handleBlur('name')}
+                  style={styles.input}
+                  error={touched.name && !!errors.name}
+                />
+                {touched.name && errors.name && (
+                  <Text style={styles.errorText}>{errors.name}</Text>
+                )}
 
-              <TextInput
-                label="Email"
-                value={values.email}
-                onChangeText={handleChange('email')}
-                onBlur={handleBlur('email')}
-                keyboardType="email-address"
-                style={styles.input}
-                error={touched.email && !!errors.email}
-              />
-              {touched.email && errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              )}
+                <TextInput
+                  label="Email"
+                  value={values.email}
+                  onChangeText={handleChange('email')}
+                  onBlur={handleBlur('email')}
+                  keyboardType="email-address"
+                  style={styles.input}
+                  error={touched.email && !!errors.email}
+                />
+                {touched.email && errors.email && (
+                  <Text style={styles.errorText}>{errors.email}</Text>
+                )}
 
-              <TextInput
-                label="Password"
-                value={values.password}
-                onChangeText={handleChange('password')}
-                onBlur={handleBlur('password')}
-                secureTextEntry
-                style={styles.input}
-                error={touched.password && !!errors.password}
-              />
-              {touched.password && errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              )}
+                <TextInput
+                  label="Password"
+                  value={values.password}
+                  onChangeText={handleChange('password')}
+                  onBlur={handleBlur('password')}
+                  secureTextEntry
+                  style={styles.input}
+                  error={touched.password && !!errors.password}
+                />
+                {touched.password && errors.password && (
+                  <Text style={styles.errorText}>{errors.password}</Text>
+                )}
 
-              <Button
-                mode="contained"
-                onPress={handleSubmit}
-                style={styles.button}>
-                Submit
-              </Button>
-            </>
-          )}
-        </Formik>
+                <Button
+                  mode="contained"
+                  onPress={handleSubmit}
+                  style={styles.button}>
+                  Submit
+                </Button>
+              </>
+            )}
+          </Formik>
 
-        <Portal>
-          <Snackbar
-            visible={visible}
-            onDismiss={hideSnackbar}
-            duration={Snackbar.DURATION_SHORT}>
-            {message}
-          </Snackbar>
-        </Portal>
+          <Portal>
+            <Snackbar
+              visible={visible}
+              onDismiss={hideSnackbar}
+              duration={Snackbar.DURATION_SHORT}>
+              {message}
+            </Snackbar>
+          </Portal>
+        </View>
       </View>
-    </View>
+    </PaperProvider>
   );
 };
 
@@ -135,10 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   content: {
-    flex: 1,
     padding: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   input: {
     marginBottom: 16,
