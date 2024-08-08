@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {FlatList, StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import StatusAppBar from '../components/StatusBar/Appbar';
 import {useTranslation} from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,7 +20,7 @@ import constants from '../src/constants';
 import {Formik} from 'formik';
 import * as Yup from 'yup';
 
-import {firebase, storage} from '../firebase';
+import storage from '@react-native-firebase/storage';
 import XLSX from 'xlsx';
 
 // Validation Schema
@@ -35,14 +35,10 @@ const TrainSchedule = () => {
   const [visible, setVisible] = React.useState(false);
   const [message, setMessage] = React.useState('');
 
-  const [language, setLanguage] = useState('');
-
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
-
-  const [data, setData] = useState([]);
 
   const theme = {
     ...DefaultTheme,
@@ -67,19 +63,34 @@ const TrainSchedule = () => {
   const initializeLanguage = async () => {
     const savedLanguage = await getLanguage();
     // i18n.changeLanguage(savedLanguage);
-    setLanguage(savedLanguage);
+    console.log(savedLanguage);
   };
 
   useEffect(() => {
     initializeLanguage();
   }, []);
 
-  const onSubmit = (values, {resetForm}) => {
-    setMessage('Request submitted successfully!');
-    setVisible(true);
+  const onSubmit = async (values, {resetForm}) => {
+    try {
+      const workbook = await getExcelFile(
+        'train_schedule/en',
+        'entranslate.xlsx',
+      );
+
+      if (workbook) {
+        const results = searchInWorkbook(workbook, values);
+        console.log(results);
+        setMessage('Form submitted successfully!');
+        setVisible(true);
+      } else {
+        setMessage('Error fetching the Excel file.');
+      }
+    } catch (error) {
+      setMessage('An error occurred.');
+      setVisible(true);
+      console.error(error);
+    }
     resetForm();
-    console.log(values);
-    fetchExcelFile(language);
   };
 
   const hideSnackbar = () => setVisible(false);
@@ -89,6 +100,7 @@ const TrainSchedule = () => {
     if (selectedDate) {
       setDate(selectedDate);
       // Format the date for the form
+
       setFieldValue('date', selectedDate);
     }
   };
@@ -102,39 +114,31 @@ const TrainSchedule = () => {
     }
   };
 
-  const fetchExcelFile = async language => {
-    let pathType = '';
-    console.log(language);
-    if (language === 'en') {
-      pathType = 'entranslate.xlsx';
-    } else if (language === 'si') {
-      pathType = `sitranslate.xlsx`;
-    } else {
-      pathType = `tatranslate.xlsx`;
-    }
-    const path = `train_schedule/${language}/${pathType}`;
-    const reference = storage().ref(path);
-    console.log(path);
+  const searchInWorkbook = (workbook, searchCriteria) => {
+    const {start_form, end_to, date, time} = searchCriteria;
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet);
+
+    return data.filter(
+      item =>
+        item.start_form === start_form &&
+        item.end_to === end_to &&
+        new Date(item.date).toISOString().split('T')[0] === date &&
+        item.time === time,
+    );
+  };
+
+  const getExcelFile = async (folder, filename) => {
     try {
-      const url = await reference.getDownloadURL();
+      const url = await storage().ref(`${folder}/${filename}`).getDownloadURL();
       const response = await fetch(url);
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
 
-      const fileReader = new FileReader();
-      fileReader.onload = e => {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
-        console.log(jsonData);
-        setData(jsonData);
-      };
-      fileReader.readAsArrayBuffer(blob);
+      return workbook;
     } catch (error) {
-      console.error(error);
+      console.error('Error fetching the Excel file:', error);
     }
   };
 
@@ -246,16 +250,6 @@ const TrainSchedule = () => {
               </>
             )}
           </Formik>
-
-          <FlatList
-            data={data}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View>
-                <Text>{JSON.stringify(item)}</Text>
-              </View>
-            )}
-          />
 
           <Portal>
             <Snackbar

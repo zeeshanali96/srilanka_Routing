@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "388627227296",
+    "project_id": "route-founder-8db52",
+    "storage_bucket": "route-founder-8db52.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:388627227296:android:a872c8f5dfb4d03d259fc5",
+        "android_client_info": {
+          "package_name": "com.routefounder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAafBHFxMpRGc-1tUbuLaRze4q2uxAHPY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
