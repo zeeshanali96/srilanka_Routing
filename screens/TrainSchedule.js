@@ -17,12 +17,16 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import constants from '../src/constants';
 
-import {Formik} from 'formik';
+import {Formik, Field} from 'formik';
 import * as Yup from 'yup';
 
 import {firebase, storage} from '../firebase';
 import XLSX from 'xlsx';
 
+import VideoPlayer from '../components/VideoPlayer/VideoPlayer';
+
+import CustomDropdown from '../components/CustomDropDown/CustomDropDown';
+import LoadingComponent from '../components/LoadingComponent/LoadingComponent';
 // Validation Schema
 const validationSchema = Yup.object().shape({
   start_form: Yup.string().required('Start Form is required'),
@@ -43,6 +47,15 @@ const TrainSchedule = () => {
   const [time, setTime] = useState(new Date());
 
   const [data, setData] = useState([]);
+
+  const [cities, setCities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const options = [
+    {label: 'Option 1', value: 'option1'},
+    {label: 'Option 2', value: 'option2'},
+    {label: 'Option 3', value: 'option3'},
+  ];
 
   const theme = {
     ...DefaultTheme,
@@ -74,12 +87,55 @@ const TrainSchedule = () => {
     initializeLanguage();
   }, []);
 
+  useEffect(() => {
+    const fetchCities = async () => {
+      const path = `cityDetail/citydetail.xlsx`;
+      const reference = storage().ref(path);
+      console.log(path);
+      try {
+        const url = await reference.getDownloadURL();
+        const response = await fetch(url);
+        const blob = await response.blob();
+
+        const fileReader = new FileReader();
+        fileReader.onload = e => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, {type: 'array'});
+
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+
+          const jsonData = XLSX.utils.sheet_to_json(sheet);
+          const citiesData = jsonData.map(item => ({
+            label: item.City,
+            value: item.City,
+          }));
+          setMessage('Welcome To Train Schedule!');
+          setVisible(true);
+          setCities(citiesData);
+          setLoading(false);
+        };
+        fileReader.readAsArrayBuffer(blob);
+      } catch (error) {
+        console.error(error);
+        setLoading(false);
+        setMessage(
+          'There is Some Error in Fetching! Check Your Network Connection',
+        );
+        setVisible(true);
+      }
+    };
+
+    fetchCities();
+  }, []);
+
   const onSubmit = (values, {resetForm}) => {
     setMessage('Request submitted successfully!');
     setVisible(true);
     resetForm();
-    console.log(values);
-    fetchExcelFile(language);
+
+    setLoading(true);
+    fetchExcelFile(values, language);
   };
 
   const hideSnackbar = () => setVisible(false);
@@ -102,9 +158,34 @@ const TrainSchedule = () => {
     }
   };
 
-  const fetchExcelFile = async language => {
+  const formatDate = dateString => {
+    const date = new Date(dateString);
+    const day = String(date.getUTCDate());
+    const month = String(date.getUTCMonth() + 1); // Months are 0-based
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatTime = timeString => {
+    const [hours, minutes] = timeString.split(':');
+    return `${hours}:${minutes}`;
+  };
+
+  const decimalToTime = decimal => {
+    console.log(decimal);
+    const totalMinutes = Math.round(decimal * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+      2,
+      '0',
+    )}`;
+  };
+
+  const fetchExcelFile = async (values, language) => {
     let pathType = '';
-    console.log(language);
+
     if (language === 'en') {
       pathType = 'entranslate.xlsx';
     } else if (language === 'si') {
@@ -128,15 +209,65 @@ const TrainSchedule = () => {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        let jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        // Format data
+        jsonData = jsonData.map(item => ({
+          ...item,
+          date: formatDate(item.date),
+          time: item.time,
+        }));
+
+        const searchCriteria = {
+          date: formatDate(values.date),
+          end_to: values.end_to,
+          start_form: values.start_form,
+          time: formatTime(values.time),
+        };
         console.log(jsonData);
+        // Filter the data
+        const filteredData = jsonData.filter(item => {
+          const matchesStartForm =
+            searchCriteria.start_form === '' ||
+            item.start_form === searchCriteria.start_form;
+          const matchesEndTo =
+            searchCriteria.end_to === '' ||
+            item.end_to === searchCriteria.end_to;
+          const matchesDate =
+            searchCriteria.date === '' || item.date === searchCriteria.date;
+          const matchesTime =
+            searchCriteria.time === '' || item.time === searchCriteria.time;
+
+          console.log(searchCriteria.date);
+          console.log(item.date);
+          // console.log(matchesStartForm, matchesEndTo, matchesDate, matchesTime);
+          return matchesStartForm && matchesEndTo && matchesDate && matchesTime;
+        });
+
+        // Log or use the filtered data
+        console.log('Filtered Data:', filteredData);
+
+        setLoading(false);
         setData(jsonData);
       };
       fileReader.readAsArrayBuffer(blob);
     } catch (error) {
       console.error(error);
+      setLoading(false);
+      setMessage(
+        'There is Some Error in Fetching! Check Your Network Connection',
+      );
+      setVisible(true);
     }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <LoadingComponent />
+      </View>
+    );
+  }
 
   const timeOptions = {hour: '2-digit', minute: '2-digit'};
 
@@ -160,7 +291,7 @@ const TrainSchedule = () => {
               formik,
             }) => (
               <>
-                <TextInput
+                {/* <TextInput
                   label="Start From"
                   value={values.start_form}
                   onChangeText={handleChange('start_form')}
@@ -183,7 +314,41 @@ const TrainSchedule = () => {
                 />
                 {touched.end_to && errors.end_to && (
                   <Text style={styles.errorText}>{errors.end_to}</Text>
-                )}
+                )} */}
+
+                <Field
+                  name="start_form"
+                  component={CustomDropdown}
+                  label="Start From"
+                  data={cities}
+                  value={
+                    cities.find(option => option.value === values.start_form)
+                      ?.label || ''
+                  }
+                  onSelect={value => setFieldValue('start_form', value)}
+                  placeholder="Start From"
+                  error={
+                    touched.start_form && errors.start_form
+                      ? errors.start_form
+                      : null
+                  }
+                  onBlur={() => {}}
+                />
+
+                <Field
+                  name="end_to"
+                  component={CustomDropdown}
+                  label="End To"
+                  data={cities}
+                  value={
+                    cities.find(option => option.value === values.end_to)
+                      ?.label || ''
+                  }
+                  onSelect={value => setFieldValue('end_to', value)}
+                  placeholder="End To"
+                  error={touched.end_to && errors.end_to ? errors.end_to : null}
+                  onBlur={() => {}}
+                />
 
                 <View style={styles.pickerContainer}>
                   <Button
@@ -247,7 +412,7 @@ const TrainSchedule = () => {
             )}
           </Formik>
 
-          <FlatList
+          {/* <FlatList
             data={data}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
@@ -255,7 +420,12 @@ const TrainSchedule = () => {
                 <Text>{JSON.stringify(item)}</Text>
               </View>
             )}
-          />
+          /> */}
+          <View className="my-5">
+            <VideoPlayer
+              source={require('../src/assets/videos/train_route.mp4')}
+            />
+          </View>
 
           <Portal>
             <Snackbar
@@ -304,6 +474,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     margin: 5,
     fontWeight: 'bold',
+  },
+  dropdown: {
+    height: 50,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    marginBottom: 10,
   },
 });
 
