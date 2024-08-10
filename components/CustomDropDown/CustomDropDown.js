@@ -1,5 +1,6 @@
 // CustomDropdown.js
 import React, {useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   View,
   Modal,
@@ -22,8 +23,10 @@ const CustomDropdown = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredData = data.filter(item =>
-    item.label.toLowerCase().includes(searchQuery.toLowerCase()),
+    item?.label.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const {t} = useTranslation();
 
   const handleSelect = item => {
     onSelect(item.value); // Pass the value (string) instead of the entire object
@@ -44,7 +47,7 @@ const CustomDropdown = ({
           onDismiss={() => setIsVisible(false)}
           contentContainerStyle={styles.modalContent}>
           <TextInput
-            label="Search"
+            label={t('search')}
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.searchInput}
@@ -65,7 +68,7 @@ const CustomDropdown = ({
             mode="contained"
             style={styles.closeButton}
             onPress={() => setIsVisible(false)}>
-            Close
+            {t('close')}
           </Button>
         </Modal>
       </Portal>

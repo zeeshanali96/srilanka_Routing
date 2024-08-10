@@ -14,6 +14,7 @@ import Setting from '../screens/Setting';
 import AboutScreen from '../screens/Settings/AboutScreen';
 import TermsScreen from '../screens/Settings/TermsScreen';
 import PrivacyScreen from '../screens/Settings/PrivacyScreen';
+import DetailsScreen from '../screens/DetailsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +36,9 @@ export default function AppNavigator() {
         <Stack.Screen name="About" component={AboutScreen} />
         <Stack.Screen name="Terms" component={TermsScreen} />
         <Stack.Screen name="Privacy" component={PrivacyScreen} />
+
+        {/* Detail Screen Routes  */}
+        <Stack.Screen name="Details" component={DetailsScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>

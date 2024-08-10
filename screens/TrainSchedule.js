@@ -27,6 +27,7 @@ import VideoPlayer from '../components/VideoPlayer/VideoPlayer';
 
 import CustomDropdown from '../components/CustomDropDown/CustomDropDown';
 import LoadingComponent from '../components/LoadingComponent/LoadingComponent';
+import LoadingSchedule from '../components/LoadingComponent/LoadingSchedule';
 // Validation Schema
 const validationSchema = Yup.object().shape({
   start_form: Yup.string().required('Start Form is required'),
@@ -51,11 +52,7 @@ const TrainSchedule = () => {
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const options = [
-    {label: 'Option 1', value: 'option1'},
-    {label: 'Option 2', value: 'option2'},
-    {label: 'Option 3', value: 'option3'},
-  ];
+  const [loadingForSchedule, setloadingForSchedule] = useState(false);
 
   const theme = {
     ...DefaultTheme,
@@ -81,60 +78,65 @@ const TrainSchedule = () => {
     const savedLanguage = await getLanguage();
     // i18n.changeLanguage(savedLanguage);
     setLanguage(savedLanguage);
+    fetchCities(savedLanguage);
   };
 
   useEffect(() => {
     initializeLanguage();
   }, []);
 
-  useEffect(() => {
-    const fetchCities = async () => {
-      const path = `cityDetail/citydetail.xlsx`;
-      const reference = storage().ref(path);
-      console.log(path);
-      try {
-        const url = await reference.getDownloadURL();
-        const response = await fetch(url);
-        const blob = await response.blob();
+  const fetchCities = async savedLanguage => {
+    let pathType = '';
+    if (savedLanguage === 'en') {
+      pathType = 'enCityDetail.xlsx';
+    } else if (savedLanguage === 'si') {
+      pathType = `siCityDetail.xlsx`;
+    } else {
+      pathType = `taCityDetail.xlsx`;
+    }
+    const path = `cityDetail/${savedLanguage}/${pathType}`;
 
-        const fileReader = new FileReader();
-        fileReader.onload = e => {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, {type: 'array'});
+    // const path = `cityDetail/citydetail.xlsx`;
+    const reference = storage().ref(path);
 
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
+    try {
+      const url = await reference.getDownloadURL();
+      const response = await fetch(url);
+      const blob = await response.blob();
 
-          const jsonData = XLSX.utils.sheet_to_json(sheet);
-          const citiesData = jsonData.map(item => ({
-            label: item.City,
-            value: item.City,
-          }));
-          setMessage('Welcome To Train Schedule!');
-          setVisible(true);
-          setCities(citiesData);
-          setLoading(false);
-        };
-        fileReader.readAsArrayBuffer(blob);
-      } catch (error) {
-        console.error(error);
-        setLoading(false);
-        setMessage(
-          'There is Some Error in Fetching! Check Your Network Connection',
-        );
+      const fileReader = new FileReader();
+      fileReader.onload = e => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        const citiesData = jsonData.map(item => ({
+          label: item.cityName,
+          value: item.cityName,
+        }));
+        setMessage(t('welcome_message'));
         setVisible(true);
-      }
-    };
-
-    fetchCities();
-  }, []);
+        setCities(citiesData);
+        setLoading(false);
+      };
+      fileReader.readAsArrayBuffer(blob);
+    } catch (error) {
+      console.error(error);
+      setLoading(false);
+      setMessage(t('error_message'));
+      setVisible(true);
+    }
+  };
 
   const onSubmit = (values, {resetForm}) => {
-    setMessage('Request submitted successfully!');
+    setMessage(t('request_success'));
     setVisible(true);
     resetForm();
 
-    setLoading(true);
+    setloadingForSchedule(true);
     fetchExcelFile(values, language);
   };
 
@@ -212,11 +214,11 @@ const TrainSchedule = () => {
         let jsonData = XLSX.utils.sheet_to_json(sheet);
 
         // Format data
-        jsonData = jsonData.map(item => ({
-          ...item,
-          date: formatDate(item.date),
-          time: item.time,
-        }));
+        // jsonData = jsonData.map(item => ({
+        //   ...item,
+        //   date: formatDate(item.date),
+        //   time: item.time,
+        // }));
 
         const searchCriteria = {
           date: formatDate(values.date),
@@ -247,16 +249,14 @@ const TrainSchedule = () => {
         // Log or use the filtered data
         console.log('Filtered Data:', filteredData);
 
-        setLoading(false);
+        // setloadingForSchedule(false);
         setData(jsonData);
       };
       fileReader.readAsArrayBuffer(blob);
     } catch (error) {
       console.error(error);
-      setLoading(false);
-      setMessage(
-        'There is Some Error in Fetching! Check Your Network Connection',
-      );
+      // setloadingForSchedule(false);
+      setMessage(t('error_message'));
       setVisible(true);
     }
   };
@@ -265,6 +265,21 @@ const TrainSchedule = () => {
     return (
       <View style={styles.container}>
         <LoadingComponent />
+      </View>
+    );
+  }
+
+  if (loadingForSchedule) {
+    return (
+      <View style={styles.container}>
+        <StatusAppBar title={t('Train Schedule')} />
+        <LoadingSchedule
+          videoSource={require('../src/assets/videos/train_route.mp4')}
+          buttonTitle={t('click_here_for_details')}
+          navigationTarget="Details"
+          setLoadingForSchedule={setloadingForSchedule}
+          scheduledata={data}
+        />
       </View>
     );
   }
@@ -319,14 +334,14 @@ const TrainSchedule = () => {
                 <Field
                   name="start_form"
                   component={CustomDropdown}
-                  label="Start From"
+                  label={t('start_from')}
                   data={cities}
                   value={
                     cities.find(option => option.value === values.start_form)
                       ?.label || ''
                   }
                   onSelect={value => setFieldValue('start_form', value)}
-                  placeholder="Start From"
+                  placeholder={t('start_from')}
                   error={
                     touched.start_form && errors.start_form
                       ? errors.start_form
@@ -338,14 +353,14 @@ const TrainSchedule = () => {
                 <Field
                   name="end_to"
                   component={CustomDropdown}
-                  label="End To"
+                  label={t('end_to')}
                   data={cities}
                   value={
                     cities.find(option => option.value === values.end_to)
                       ?.label || ''
                   }
                   onSelect={value => setFieldValue('end_to', value)}
-                  placeholder="End To"
+                  placeholder={t('end_to')}
                   error={touched.end_to && errors.end_to ? errors.end_to : null}
                   onBlur={() => {}}
                 />
@@ -355,7 +370,7 @@ const TrainSchedule = () => {
                     mode="elevated"
                     onPress={() => setShowDatePicker(true)}
                     style={styles.button}>
-                    Select Date
+                    {t('select_date')}
                   </Button>
                   {showDatePicker && (
                     <DateTimePicker
@@ -371,7 +386,7 @@ const TrainSchedule = () => {
                     mode="elevated"
                     onPress={() => setShowTimePicker(true)}
                     style={styles.button}>
-                    Select Time
+                    {t('select_time')}
                   </Button>
                   {showTimePicker && (
                     <DateTimePicker
@@ -406,7 +421,7 @@ const TrainSchedule = () => {
                   mode="contained"
                   onPress={handleSubmit}
                   style={styles.button}>
-                  Find
+                  {t('find')}
                 </Button>
               </>
             )}
@@ -463,6 +478,7 @@ const styles = StyleSheet.create({
   pickerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    flexWrap: 'wrap',
   },
   infoContainer: {
     marginVertical: 20,

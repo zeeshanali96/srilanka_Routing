@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { ActivityIndicator, Surface, Text } from 'react-native-paper';
+import {useTranslation} from 'react-i18next';
+import {View, StyleSheet} from 'react-native';
+import {ActivityIndicator, Surface, Text} from 'react-native-paper';
 
 const LoadingComponent = () => {
+  const {t} = useTranslation();
   return (
     <Surface style={styles.container}>
       <ActivityIndicator animating={true} size="large" />
-      <Text style={styles.text}>Loading...</Text>
+      <Text style={styles.text}>{t('loading')}...</Text>
     </Surface>
   );
 };
@@ -19,10 +21,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 8,
-    elevation: 4, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.3, 
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
     shadowRadius: 4,
   },
   text: {

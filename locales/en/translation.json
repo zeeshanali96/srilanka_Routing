@@ -11,5 +11,32 @@
     "exit": "Exit",
     "exit_confirmation": "Are you sure you want to exit?",
     "cancel":"cancel",
-    "ok":"OK"
+    "ok":"OK",
+
+    "start_from": "Start From",
+    "end_to": "End To",
+    "select_date": "Select Date",
+    "select_time": "Select Time",
+    "find": "Find",
+    "click_here_to_see_train_details": "Click Here to See Train Details",
+
+    "search": "Search",
+    "from": "From",
+    "to": "To",
+    "date": "Date",
+    "time": "Time",
+    "1st_class_fee": "1st Class Fee",
+    "2nd_class_fee": "2nd Class Fee",
+    "3rd_class_fee": "3rd Class Fee",
+    "semi_class_fee": "Semi Class Fee",
+    "contact": "Contact",
+    "remark": "Remark",
+    "close": "Close",
+
+    "welcome_message": "Welcome To Train Schedule!",
+    "error_message": "There is Some Error in Fetching! Check Your Network Connection",
+    "click_here_for_details": "Click Here to See Train Details",
+
+    "request_success": "Request submitted successfully!",
+    "loading": "Loading"
 }
