@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {FlatList, StyleSheet, Text, View} from 'react-native';
 import StatusAppBar from '../components/StatusBar/Appbar';
 import {useTranslation} from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,9 +17,17 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import constants from '../src/constants';
 
-import {Formik} from 'formik';
+import {Formik, Field} from 'formik';
 import * as Yup from 'yup';
 
+import {firebase, storage} from '../firebase';
+import XLSX from 'xlsx';
+
+import VideoPlayer from '../components/VideoPlayer/VideoPlayer';
+
+import CustomDropdown from '../components/CustomDropDown/CustomDropDown';
+import LoadingComponent from '../components/LoadingComponent/LoadingComponent';
+import LoadingSchedule from '../components/LoadingComponent/LoadingSchedule';
 // Validation Schema
 const validationSchema = Yup.object().shape({
   start_form: Yup.string().required('Start Form is required'),
@@ -32,16 +40,25 @@ const TrainSchedule = () => {
   const [visible, setVisible] = React.useState(false);
   const [message, setMessage] = React.useState('');
 
+  const [language, setLanguage] = useState('');
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
 
+  const [data, setData] = useState([]);
+
+  const [cities, setCities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [loadingForSchedule, setloadingForSchedule] = useState(false);
+
   const theme = {
     ...DefaultTheme,
     colors: {
       ...DefaultTheme.colors,
-      primary: constants.colors.blue, // Customize primary color
+      primary: constants.colors.blue,
     },
   };
 
@@ -60,18 +77,67 @@ const TrainSchedule = () => {
   const initializeLanguage = async () => {
     const savedLanguage = await getLanguage();
     // i18n.changeLanguage(savedLanguage);
-    console.log(savedLanguage);
+    setLanguage(savedLanguage);
+    fetchCities(savedLanguage);
   };
 
   useEffect(() => {
     initializeLanguage();
   }, []);
 
+  const fetchCities = async savedLanguage => {
+    let pathType = '';
+    if (savedLanguage === 'en') {
+      pathType = 'enCityDetail.xlsx';
+    } else if (savedLanguage === 'si') {
+      pathType = `siCityDetail.xlsx`;
+    } else {
+      pathType = `taCityDetail.xlsx`;
+    }
+    const path = `cityDetail/${savedLanguage}/${pathType}`;
+
+    // const path = `cityDetail/citydetail.xlsx`;
+    const reference = storage().ref(path);
+
+    try {
+      const url = await reference.getDownloadURL();
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      const fileReader = new FileReader();
+      fileReader.onload = e => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        const citiesData = jsonData.map(item => ({
+          label: item.cityName,
+          value: item.cityName,
+        }));
+        setMessage(t('welcome_message'));
+        setVisible(true);
+        setCities(citiesData);
+        setLoading(false);
+      };
+      fileReader.readAsArrayBuffer(blob);
+    } catch (error) {
+      console.error(error);
+      setLoading(false);
+      setMessage(t('error_message'));
+      setVisible(true);
+    }
+  };
+
   const onSubmit = (values, {resetForm}) => {
-    setMessage('Form submitted successfully!');
+    setMessage(t('request_success'));
     setVisible(true);
     resetForm();
-    console.log(values);
+
+    setloadingForSchedule(true);
+    fetchExcelFile(values, language);
   };
 
   const hideSnackbar = () => setVisible(false);
@@ -81,7 +147,6 @@ const TrainSchedule = () => {
     if (selectedDate) {
       setDate(selectedDate);
       // Format the date for the form
-
       setFieldValue('date', selectedDate);
     }
   };
@@ -94,6 +159,130 @@ const TrainSchedule = () => {
       setFieldValue('time', selectedTime.toLocaleTimeString());
     }
   };
+
+  const formatDate = dateString => {
+    const date = new Date(dateString);
+    const day = String(date.getUTCDate());
+    const month = String(date.getUTCMonth() + 1); // Months are 0-based
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatTime = timeString => {
+    const [hours, minutes] = timeString.split(':');
+    return `${hours}:${minutes}`;
+  };
+
+  const decimalToTime = decimal => {
+    console.log(decimal);
+    const totalMinutes = Math.round(decimal * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+      2,
+      '0',
+    )}`;
+  };
+
+  const fetchExcelFile = async (values, language) => {
+    let pathType = '';
+
+    if (language === 'en') {
+      pathType = 'entranslate.xlsx';
+    } else if (language === 'si') {
+      pathType = `sitranslate.xlsx`;
+    } else {
+      pathType = `tatranslate.xlsx`;
+    }
+    const path = `train_schedule/${language}/${pathType}`;
+    const reference = storage().ref(path);
+    console.log(path);
+    try {
+      const url = await reference.getDownloadURL();
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      const fileReader = new FileReader();
+      fileReader.onload = e => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        let jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        // Format data
+        // jsonData = jsonData.map(item => ({
+        //   ...item,
+        //   date: formatDate(item.date),
+        //   time: item.time,
+        // }));
+
+        const searchCriteria = {
+          date: formatDate(values.date),
+          end_to: values.end_to,
+          start_form: values.start_form,
+          time: formatTime(values.time),
+        };
+        console.log(jsonData);
+        // Filter the data
+        const filteredData = jsonData.filter(item => {
+          const matchesStartForm =
+            searchCriteria.start_form === '' ||
+            item.start_form === searchCriteria.start_form;
+          const matchesEndTo =
+            searchCriteria.end_to === '' ||
+            item.end_to === searchCriteria.end_to;
+          const matchesDate =
+            searchCriteria.date === '' || item.date === searchCriteria.date;
+          const matchesTime =
+            searchCriteria.time === '' || item.time === searchCriteria.time;
+
+          console.log(searchCriteria.date);
+          console.log(item.date);
+          // console.log(matchesStartForm, matchesEndTo, matchesDate, matchesTime);
+          return matchesStartForm && matchesEndTo && matchesDate && matchesTime;
+        });
+
+        // Log or use the filtered data
+        console.log('Filtered Data:', filteredData);
+
+        // setloadingForSchedule(false);
+        setData(jsonData);
+      };
+      fileReader.readAsArrayBuffer(blob);
+    } catch (error) {
+      console.error(error);
+      // setloadingForSchedule(false);
+      setMessage(t('error_message'));
+      setVisible(true);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <LoadingComponent />
+      </View>
+    );
+  }
+
+  if (loadingForSchedule) {
+    return (
+      <View style={styles.container}>
+        <StatusAppBar title={t('Train Schedule')} />
+        <LoadingSchedule
+          videoSource={require('../src/assets/videos/train_route.mp4')}
+          buttonTitle={t('click_here_for_details')}
+          navigationTarget="Details"
+          setLoadingForSchedule={setloadingForSchedule}
+          scheduledata={data}
+        />
+      </View>
+    );
+  }
 
   const timeOptions = {hour: '2-digit', minute: '2-digit'};
 
@@ -117,7 +306,7 @@ const TrainSchedule = () => {
               formik,
             }) => (
               <>
-                <TextInput
+                {/* <TextInput
                   label="Start From"
                   value={values.start_form}
                   onChangeText={handleChange('start_form')}
@@ -140,14 +329,48 @@ const TrainSchedule = () => {
                 />
                 {touched.end_to && errors.end_to && (
                   <Text style={styles.errorText}>{errors.end_to}</Text>
-                )}
+                )} */}
+
+                <Field
+                  name="start_form"
+                  component={CustomDropdown}
+                  label={t('start_from')}
+                  data={cities}
+                  value={
+                    cities.find(option => option.value === values.start_form)
+                      ?.label || ''
+                  }
+                  onSelect={value => setFieldValue('start_form', value)}
+                  placeholder={t('start_from')}
+                  error={
+                    touched.start_form && errors.start_form
+                      ? errors.start_form
+                      : null
+                  }
+                  onBlur={() => {}}
+                />
+
+                <Field
+                  name="end_to"
+                  component={CustomDropdown}
+                  label={t('end_to')}
+                  data={cities}
+                  value={
+                    cities.find(option => option.value === values.end_to)
+                      ?.label || ''
+                  }
+                  onSelect={value => setFieldValue('end_to', value)}
+                  placeholder={t('end_to')}
+                  error={touched.end_to && errors.end_to ? errors.end_to : null}
+                  onBlur={() => {}}
+                />
 
                 <View style={styles.pickerContainer}>
                   <Button
                     mode="elevated"
                     onPress={() => setShowDatePicker(true)}
                     style={styles.button}>
-                    Select Date
+                    {t('select_date')}
                   </Button>
                   {showDatePicker && (
                     <DateTimePicker
@@ -163,7 +386,7 @@ const TrainSchedule = () => {
                     mode="elevated"
                     onPress={() => setShowTimePicker(true)}
                     style={styles.button}>
-                    Select Time
+                    {t('select_time')}
                   </Button>
                   {showTimePicker && (
                     <DateTimePicker
@@ -198,11 +421,26 @@ const TrainSchedule = () => {
                   mode="contained"
                   onPress={handleSubmit}
                   style={styles.button}>
-                  Find
+                  {t('find')}
                 </Button>
               </>
             )}
           </Formik>
+
+          {/* <FlatList
+            data={data}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View>
+                <Text>{JSON.stringify(item)}</Text>
+              </View>
+            )}
+          /> */}
+          <View className="my-5">
+            <VideoPlayer
+              source={require('../src/assets/videos/train_route.mp4')}
+            />
+          </View>
 
           <Portal>
             <Snackbar
@@ -240,6 +478,7 @@ const styles = StyleSheet.create({
   pickerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    flexWrap: 'wrap',
   },
   infoContainer: {
     marginVertical: 20,
@@ -251,6 +490,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     margin: 5,
     fontWeight: 'bold',
+  },
+  dropdown: {
+    height: 50,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    marginBottom: 10,
   },
 });
 

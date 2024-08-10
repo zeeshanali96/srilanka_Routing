@@ -1,5 +1,5 @@
 // screens/HomeScreen.js
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Linking
+  Linking,
 } from 'react-native';
 import DashboardCard from '../components/Card/DashboardCard';
 
@@ -19,11 +19,11 @@ import {useTranslation} from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const HomeScreen = () => {
-  const {t,i18n} = useTranslation();
+  const {t, i18n} = useTranslation();
 
   const navigation = useNavigation();
 
-  const saveLanguage = async (language) => {
+  const saveLanguage = async language => {
     try {
       await AsyncStorage.setItem('@language', language);
     } catch (e) {
@@ -31,31 +31,48 @@ const HomeScreen = () => {
     }
   };
 
-  const handleLanguageChange =async(lng)=> {
+  const getLanguage = async () => {
+    try {
+      const value = await AsyncStorage.getItem('@language');
+      if (value !== null) {
+        i18n.changeLanguage(value);
+      } else {
+        i18n.changeLanguage(value);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    getLanguage();
+  }, []);
+
+  const handleLanguageChange = async lng => {
     i18n.changeLanguage(lng);
-    
+
     await saveLanguage(lng);
   };
 
-  const handleCardPress = (routeName) => {
+  const handleCardPress = routeName => {
     navigation.navigate(routeName);
   };
 
-  
+  const handleContactUs = () => {
+    const phoneNumber = '94772549526';
+    const url = `https://wa.me/${phoneNumber}`;
 
-  const handleContactUs=()=>{
-      const phoneNumber = '94772549526';
-      const url = `https://wa.me/${phoneNumber}`;
-  
-      Linking.openURL(url)
-        .catch((err) => console.error('Failed to open URL:', err));
-    
-  }
+    Linking.openURL(url).catch(err =>
+      console.error('Failed to open URL:', err),
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1  p-4">
       <View className="items-center ">
-        <Text className="text-3xl font-bold mb-4 text-center" style={styles.topHeading}>
+        <Text
+          className="text-3xl font-bold mb-4 text-center"
+          style={styles.topHeading}>
           {t('topHeading')}
         </Text>
 
