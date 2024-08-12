@@ -170,20 +170,17 @@ const TrainSchedule = () => {
 
   const formatTime = timeString => {
     const [hours, minutes] = timeString.split(':');
-    return `${hours}:${minutes}`;
+  
+    const formattedHours = Number(hours); 
+    const formattedMinutes = Number(minutes); 
+  
+    const formattedMinutesString = formattedMinutes < 10 ? `0${formattedMinutes}` : formattedMinutes;
+  
+    
+    return `${formattedHours}:${formattedMinutesString}`;
   };
 
-  const decimalToTime = decimal => {
-    console.log(decimal);
-    const totalMinutes = Math.round(decimal * 24 * 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
-      2,
-      '0',
-    )}`;
-  };
+ 
 
   const fetchExcelFile = async (values, language) => {
     let pathType = '';
@@ -226,31 +223,42 @@ const TrainSchedule = () => {
           start_form: values.start_form,
           time: formatTime(values.time),
         };
-        console.log(jsonData);
-        // Filter the data
-        const filteredData = jsonData.filter(item => {
-          const matchesStartForm =
-            searchCriteria.start_form === '' ||
-            item.start_form === searchCriteria.start_form;
-          const matchesEndTo =
-            searchCriteria.end_to === '' ||
-            item.end_to === searchCriteria.end_to;
-          const matchesDate =
-            searchCriteria.date === '' || item.date === searchCriteria.date;
-          const matchesTime =
-            searchCriteria.time === '' || item.time === searchCriteria.time;
+        // console.log(jsonData);
 
-          console.log(searchCriteria.date);
-          console.log(item.date);
-          // console.log(matchesStartForm, matchesEndTo, matchesDate, matchesTime);
-          return matchesStartForm && matchesEndTo && matchesDate && matchesTime;
+        // Filter the data
+        // const filteredData = jsonData.filter(item => {
+        //   const matchesStartForm =
+        //     searchCriteria.start_form === '' ||
+        //     item.start_form === searchCriteria.start_form;
+        //   const matchesEndTo =
+        //     searchCriteria.end_to === '' ||
+        //     item.end_to === searchCriteria.end_to;
+        //   const matchesDate =
+        //     searchCriteria.date === '' || item.date === searchCriteria.date;
+        //   const matchesTime =
+        //     searchCriteria.time === '' || item.time === searchCriteria.time;
+
+        //   console.log(searchCriteria.date);
+        //   console.log(item.date);
+          
+        //   console.log(matchesStartForm, matchesEndTo, matchesDate, matchesTime);
+        //   return matchesStartForm && matchesEndTo && matchesDate && matchesTime;
+        // });
+        // console.log(searchCriteria);
+        const filteredData = jsonData.filter(item => {
+          
+          return Object.keys(searchCriteria).every(key => {
+            if (searchCriteria[key] === undefined || searchCriteria[key] === '') return true; // Skip if no search criteria
+            return item[key] === searchCriteria[key];
+          });
         });
 
+      
         // Log or use the filtered data
-        console.log('Filtered Data:', filteredData);
+        // console.log('Filtered Data:', filteredData);
 
         // setloadingForSchedule(false);
-        setData(jsonData);
+        setData(filteredData);
       };
       fileReader.readAsArrayBuffer(blob);
     } catch (error) {

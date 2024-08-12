@@ -20,7 +20,7 @@ const DetailsScreen = ({route}) => {
         </View>
         <Paragraph>
           <Text style={styles.heading}>{t('from')}:</Text> {data?.start_form} -{' '}
-          <Text style={styles.heading}>{t('to')}:</Text>: {data?.end_to}
+          <Text style={styles.heading}>{t('to')}:</Text> {data?.end_to}
         </Paragraph>
         <View style={styles.pickerContainer}>
           <Paragraph>
@@ -35,17 +35,23 @@ const DetailsScreen = ({route}) => {
           <View style={styles.pickerContainer}>
             <Paragraph>
               <Text style={styles.heading}>{t('1st_class_fee')}:</Text>{' '}
-              {data['1st_class_fee']}
+              {data?.first_class_fee}
             </Paragraph>
             <Paragraph>
               <Text style={styles.heading}>{t('2nd_class_fee')}:</Text>{' '}
-              {data['2nd_class_fee']}
+              {data?.second_class_fee}
             </Paragraph>
           </View>
-          <Paragraph>
-            <Text style={styles.heading}>{t('3rd_class_fee')}:</Text>{' '}
-            {data['3rd_class_fee']}
-          </Paragraph>
+          <View style={styles.pickerContainer}>
+            <Paragraph>
+              <Text style={styles.heading}>{t('3rd_class_fee')}:</Text>{' '}
+              {data?.third_class_fee}
+            </Paragraph>
+            <Paragraph>
+              <Text style={styles.heading}>{t('3rd_class_fee')}:</Text>{' '}
+              {data?.semi_class_fee}
+            </Paragraph>
+          </View>
         </View>
         <Paragraph>
           <Text style={styles.heading}>{t('contact')}:</Text>{' '}
