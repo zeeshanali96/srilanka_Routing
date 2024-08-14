@@ -38,5 +38,7 @@
     "click_here_for_details": "Click Here to See Train Details",
 
     "request_success": "Request submitted successfully!",
-    "loading": "Loading"
+    "loading": "Loading",
+
+    "no_data":"No data available"
 }

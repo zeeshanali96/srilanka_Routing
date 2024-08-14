@@ -132,8 +132,8 @@ const TrainSchedule = () => {
   };
 
   const onSubmit = (values, {resetForm}) => {
-    setMessage(t('request_success'));
-    setVisible(true);
+    // setMessage(t('request_success'));
+    // setVisible(true);
     resetForm();
 
     setloadingForSchedule(true);

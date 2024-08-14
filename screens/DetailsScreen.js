@@ -1,15 +1,36 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {ScrollView, View, StyleSheet} from 'react-native';
-import {Card, Text, Title, Paragraph} from 'react-native-paper';
+import {
+  Card,
+  Text,
+  Title,
+  Paragraph,
+  Snackbar,
+  Portal,
+  DefaultTheme,
+} from 'react-native-paper';
 import StatusAppBar from '../components/StatusBar/Appbar';
 import {useTranslation} from 'react-i18next';
 import constants from '../src/constants';
 
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {Provider as PaperProvider} from 'react-native-paper';
+import VideoPlayer from '../components/VideoPlayer/VideoPlayer';
 
 const DetailsScreen = ({route}) => {
   const {t} = useTranslation();
   const {scheduledata} = route.params;
+  const [visible, setVisible] = useState(true);
+
+  const theme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: constants.colors.blue,
+    },
+  };
+
+  const hideSnackbar = () => setVisible(false);
 
   const TrainCard = ({data}) => (
     <Card style={styles.card}>
@@ -27,7 +48,6 @@ const DetailsScreen = ({route}) => {
             <Text style={styles.heading}>{t('date')}:</Text> {data?.date}
           </Paragraph>
           <Paragraph>
-            {' '}
             <Text style={styles.heading}>{t('time')}:</Text> {data?.time}
           </Paragraph>
         </View>
@@ -65,18 +85,35 @@ const DetailsScreen = ({route}) => {
   );
 
   return (
-    <View>
+    <PaperProvider theme={theme}>
       <StatusAppBar title={t('Train Schedule')} />
       <ScrollView contentContainerStyle={styles.container}>
         {scheduledata.length > 0 ? (
-          scheduledata.map(train => <TrainCard key={train.id} data={train} />)
+          scheduledata.map((train, index) => (
+            <View key={train.id}>
+              <TrainCard data={train} />
+              {index === 2 && (
+                <VideoPlayer
+                  source={require('../src/assets/videos/train_route.mp4')}
+                />
+              )}
+            </View>
+          ))
         ) : (
           <View style={styles.noDataContainer}>
-            <Text style={styles.noDataText}>No data available</Text>
+            <Text style={styles.noDataText}>{t('no_data')}</Text>
           </View>
         )}
       </ScrollView>
-    </View>
+      <Portal>
+        <Snackbar
+          visible={visible}
+          onDismiss={hideSnackbar}
+          duration={Snackbar.DURATION_SHORT}>
+          {t('request_success')}
+        </Snackbar>
+      </Portal>
+    </PaperProvider>
   );
 };
 
